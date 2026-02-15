@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pink Doulingo</title>  <!-- PWA -->  <link rel="manifest" href="manifest.json" />  <style>
+  <title>Pink Doulingo</title>  <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
 
     body {
@@ -113,13 +113,15 @@
 
   <!-- LEADERBOARD -->
   <div class="leaderboard">
-    <h3>🏆 Online Ranking</h3>
+    <h3>🏆 Global Ranking</h3>
     <ol id="ranking"></ol>
   </div>
 
 </div>
 
-  </div>  <footer>Full Website Version • Login • Ranking • PWA Ready</footer>  <script>
+  </div>  <footer>Connected to Node.js Server • Online Progress • Global Ranking</footer>  <script>
+    const API = "http://localhost:3000"; // change to your deployed URL later
+
     const lessons = {
       english: [
         { q: "Olá = ?", a: ["Hello", "Bye", "Food"], c: 0 },
@@ -133,26 +135,35 @@
       ]
     };
 
-    let user = localStorage.getItem('pd_user');
-    let xp = Number(localStorage.getItem('pd_xp')) || 0;
-    let streak = Number(localStorage.getItem('pd_streak')) || 0;
+    let user = null;
+    let xp = 0;
+    let streak = 0;
 
-    function login() {
+    async function login() {
       const name = document.getElementById('username').value.trim();
       if (!name) return alert('Enter a username');
-      localStorage.setItem('pd_user', name);
-      user = name;
+
+      const res = await fetch(API + "/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: name })
+      });
+
+      const data = await res.json();
+
+      user = data.username;
+      xp = data.xp;
+      streak = data.streak;
+
       startApp();
+      loadRanking();
     }
 
     function startApp() {
       document.getElementById('loginBox').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       updateStats();
-      loadRanking();
     }
-
-    if (user) startApp();
 
     function updateStats() {
       document.getElementById('xp').textContent = xp;
@@ -188,7 +199,7 @@
       document.getElementById('progress').style.width = (index / lessons[currentLang].length) * 100 + '%';
     }
 
-    function checkAnswer(sel, correct) {
+    async function checkAnswer(sel, correct) {
       const res = document.getElementById('result');
 
       if (sel === correct) {
@@ -202,11 +213,20 @@
         streak = 0;
       }
 
-      localStorage.setItem('pd_xp', xp);
-      localStorage.setItem('pd_streak', streak);
-
-      saveRanking();
       updateStats();
+      await saveProgress();
+    }
+
+    async function saveProgress() {
+      if (!user) return;
+
+      await fetch(API + "/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user, xp, streak })
+      });
+
+      loadRanking();
     }
 
     function nextQuestion() {
@@ -220,35 +240,18 @@
       showQuestion();
     }
 
-    // FAKE ONLINE RANKING USING LOCALSTORAGE
-    function saveRanking() {
-      let ranking = JSON.parse(localStorage.getItem('pd_ranking') || '[]');
+    async function loadRanking() {
+      const res = await fetch(API + "/leaderboard");
+      const ranking = await res.json();
 
-      const existing = ranking.find(r => r.name === user);
-      if (existing) existing.xp = xp;
-      else ranking.push({ name: user, xp });
-
-      ranking.sort((a,b)=>b.xp-a.xp);
-      localStorage.setItem('pd_ranking', JSON.stringify(ranking));
-      loadRanking();
-    }
-
-    function loadRanking() {
       const list = document.getElementById('ranking');
       list.innerHTML = '';
 
-      let ranking = JSON.parse(localStorage.getItem('pd_ranking') || '[]');
-
-      ranking.slice(0,5).forEach(r => {
+      ranking.forEach(r => {
         const li = document.createElement('li');
-        li.textContent = `${r.name} — ${r.xp} XP`;
+        li.textContent = `${r.username} — ${r.xp} XP`;
         list.appendChild(li);
       });
-    }
-
-    // SERVICE WORKER
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
     }
   </script></body>
 </html>
