@@ -1,0 +1,215 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pink Doulingo</title>  <link rel="manifest" href="manifest.json" />  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+
+    body {
+      background: linear-gradient(135deg, #ffb6d9, #ff69b4);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+    }
+
+    header {
+      width: 100%;
+      background: #ff1493;
+      padding: 18px;
+      text-align: center;
+      color: white;
+      font-size: 26px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .container {
+      max-width: 900px;
+      width: 92%;
+      margin-top: 25px;
+      background: white;
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    h1 { color: #ff1493; margin-bottom: 10px; }
+
+    .login {
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin: 5px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 12px;
+      background: #ff1493;
+      color: white;
+      cursor: pointer;
+    }
+
+    .stats { display: flex; justify-content: space-around; margin: 15px 0 20px; font-weight: bold; }
+
+    .languages { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+    .lang-btn { background: #ff69b4; color: white; border: none; padding: 16px; border-radius: 14px; cursor: pointer; }
+
+    .lesson { display: none; margin-top: 20px; text-align: left; }
+
+    .progress-bar { width: 100%; height: 10px; background: #ffd6e8; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+
+    .progress-fill { height: 100%; width: 0%; background: #ff1493; transition: width 0.3s; }
+
+    .answers button { display: block; width: 100%; margin: 6px 0; padding: 12px; border-radius: 10px; border: none; background: #ffc0cb; cursor: pointer; }
+
+    .result { margin-top: 10px; font-weight: bold; }
+
+    .next-btn { margin-top: 10px; padding: 10px 16px; border: none; border-radius: 12px; background: #ff1493; color: white; cursor: pointer; display: none; }
+
+    footer { margin-top: auto; padding: 18px; color: white; font-size: 14px; opacity: 0.8; }
+  </style></head><body>
+  <header>💗 Pink Doulingo</header>  <div class="container">
+    <h1>Learn Languages in a Cute Way!</h1><div class="login" id="loginBox">
+  <input id="username" placeholder="Enter username" />
+  <button class="btn" onclick="login()">Login</button>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="stats">
+    <div>⭐ XP: <span id="xp">0</span></div>
+    <div>🔥 Streak: <span id="streak">0</span></div>
+    <div>🏆 Level: <span id="level">1</span></div>
+  </div>
+
+  <p>Select a language:</p>
+
+  <div class="languages">
+    <button class="lang-btn" onclick="startLesson('english')">English</button>
+    <button class="lang-btn" onclick="startLesson('spanish')">Spanish</button>
+    <button class="lang-btn" onclick="startLesson('japanese')">Japanese</button>
+  </div>
+
+  <div class="lesson" id="lesson">
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    <div id="question"></div>
+    <div id="answers"></div>
+    <div class="result" id="result"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next ➜</button>
+  </div>
+</div>
+
+  </div>  <footer>Installable PWA • Daily Challenge • Progress Saved</footer>  <script>
+    const lessons = {
+      english: [
+        { q: "Olá = ?", a: ["Hello", "Bye", "Food"], c: 0 },
+        { q: "Obrigado = ?", a: ["Thanks", "Night", "Run"], c: 0 }
+      ],
+      spanish: [
+        { q: "Gracias = ?", a: ["Thanks", "Please", "Hello"], c: 0 }
+      ],
+      japanese: [
+        { q: "Arigatou = ?", a: ["Thanks", "Bye", "Water"], c: 0 }
+      ]
+    };
+
+    let user = localStorage.getItem('user');
+    let xp = Number(localStorage.getItem('xp')) || 0;
+    let streak = Number(localStorage.getItem('streak')) || 0;
+
+    function login() {
+      const name = document.getElementById('username').value.trim();
+      if (!name) return alert('Enter a username');
+      localStorage.setItem('user', name);
+      startApp();
+    }
+
+    function startApp() {
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      updateStats();
+    }
+
+    if (user) startApp();
+
+    function updateStats() {
+      document.getElementById('xp').textContent = xp;
+      document.getElementById('streak').textContent = streak;
+      document.getElementById('level').textContent = Math.floor(xp / 50) + 1;
+    }
+
+    let currentLang = null;
+    let index = 0;
+
+    function startLesson(lang) {
+      currentLang = lang;
+      index = 0;
+      document.getElementById('lesson').style.display = 'block';
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const data = lessons[currentLang][index];
+      document.getElementById('question').textContent = data.q;
+      document.getElementById('result').textContent = '';
+      document.getElementById('nextBtn').style.display = 'none';
+
+      const div = document.getElementById('answers');
+      div.innerHTML = '';
+
+      data.a.forEach((t, i) => {
+        const b = document.createElement('button');
+        b.textContent = t;
+        b.onclick = () => checkAnswer(i, data.c);
+        div.appendChild(b);
+      });
+
+      document.getElementById('progress').style.width = (index / lessons[currentLang].length) * 100 + '%';
+    }
+
+    function checkAnswer(sel, correct) {
+      const res = document.getElementById('result');
+
+      if (sel === correct) {
+        res.textContent = 'Correct! +10 XP';
+        res.style.color = 'green';
+        xp += 10;
+        streak += 1;
+      } else {
+        res.textContent = 'Wrong!';
+        res.style.color = 'red';
+        streak = 0;
+      }
+
+      localStorage.setItem('xp', xp);
+      localStorage.setItem('streak', streak);
+      updateStats();
+      document.getElementById('nextBtn').style.display = 'block';
+    }
+
+    function nextQuestion() {
+      index++;
+      if (index >= lessons[currentLang].length) {
+        document.getElementById('question').textContent = 'Lesson Complete!';
+        document.getElementById('answers').innerHTML = '';
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('progress').style.width = '100%';
+        return;
+      }
+      showQuestion();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script></body>
+</html>
