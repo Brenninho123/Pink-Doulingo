@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pink Doulingo</title>  <link rel="manifest" href="manifest.json" />  <style>
+  <title>Pink Doulingo</title>  <!-- PWA -->  <link rel="manifest" href="manifest.json" />  <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
 
     body {
@@ -26,8 +26,8 @@
     }
 
     .container {
-      max-width: 900px;
-      width: 92%;
+      max-width: 950px;
+      width: 94%;
       margin-top: 25px;
       background: white;
       border-radius: 20px;
@@ -38,9 +38,7 @@
 
     h1 { color: #ff1493; margin-bottom: 10px; }
 
-    .login {
-      margin-bottom: 20px;
-    }
+    .hidden { display: none; }
 
     input {
       padding: 10px;
@@ -64,7 +62,7 @@
 
     .lang-btn { background: #ff69b4; color: white; border: none; padding: 16px; border-radius: 14px; cursor: pointer; }
 
-    .lesson { display: none; margin-top: 20px; text-align: left; }
+    .lesson { margin-top: 20px; text-align: left; }
 
     .progress-bar { width: 100%; height: 10px; background: #ffd6e8; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
 
@@ -74,17 +72,22 @@
 
     .result { margin-top: 10px; font-weight: bold; }
 
-    .next-btn { margin-top: 10px; padding: 10px 16px; border: none; border-radius: 12px; background: #ff1493; color: white; cursor: pointer; display: none; }
+    .next-btn { margin-top: 10px; padding: 10px 16px; border: none; border-radius: 12px; background: #ff1493; color: white; cursor: pointer; }
+
+    .leaderboard { margin-top: 25px; text-align: left; }
 
     footer { margin-top: auto; padding: 18px; color: white; font-size: 14px; opacity: 0.8; }
   </style></head><body>
   <header>💗 Pink Doulingo</header>  <div class="container">
-    <h1>Learn Languages in a Cute Way!</h1><div class="login" id="loginBox">
+    <h1>Learn Languages in a Cute Way!</h1><!-- LOGIN -->
+<div id="loginBox">
   <input id="username" placeholder="Enter username" />
   <button class="btn" onclick="login()">Login</button>
 </div>
 
-<div id="app" style="display:none;">
+<!-- APP -->
+<div id="app" class="hidden">
+
   <div class="stats">
     <div>⭐ XP: <span id="xp">0</span></div>
     <div>🔥 Streak: <span id="streak">0</span></div>
@@ -99,16 +102,24 @@
     <button class="lang-btn" onclick="startLesson('japanese')">Japanese</button>
   </div>
 
-  <div class="lesson" id="lesson">
+  <!-- LESSON -->
+  <div class="lesson hidden" id="lesson">
     <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
     <div id="question"></div>
     <div id="answers"></div>
     <div class="result" id="result"></div>
     <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next ➜</button>
   </div>
+
+  <!-- LEADERBOARD -->
+  <div class="leaderboard">
+    <h3>🏆 Online Ranking</h3>
+    <ol id="ranking"></ol>
+  </div>
+
 </div>
 
-  </div>  <footer>Installable PWA • Daily Challenge • Progress Saved</footer>  <script>
+  </div>  <footer>Full Website Version • Login • Ranking • PWA Ready</footer>  <script>
     const lessons = {
       english: [
         { q: "Olá = ?", a: ["Hello", "Bye", "Food"], c: 0 },
@@ -122,21 +133,23 @@
       ]
     };
 
-    let user = localStorage.getItem('user');
-    let xp = Number(localStorage.getItem('xp')) || 0;
-    let streak = Number(localStorage.getItem('streak')) || 0;
+    let user = localStorage.getItem('pd_user');
+    let xp = Number(localStorage.getItem('pd_xp')) || 0;
+    let streak = Number(localStorage.getItem('pd_streak')) || 0;
 
     function login() {
       const name = document.getElementById('username').value.trim();
       if (!name) return alert('Enter a username');
-      localStorage.setItem('user', name);
+      localStorage.setItem('pd_user', name);
+      user = name;
       startApp();
     }
 
     function startApp() {
-      document.getElementById('loginBox').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
+      document.getElementById('loginBox').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
       updateStats();
+      loadRanking();
     }
 
     if (user) startApp();
@@ -153,7 +166,7 @@
     function startLesson(lang) {
       currentLang = lang;
       index = 0;
-      document.getElementById('lesson').style.display = 'block';
+      document.getElementById('lesson').classList.remove('hidden');
       showQuestion();
     }
 
@@ -161,7 +174,6 @@
       const data = lessons[currentLang][index];
       document.getElementById('question').textContent = data.q;
       document.getElementById('result').textContent = '';
-      document.getElementById('nextBtn').style.display = 'none';
 
       const div = document.getElementById('answers');
       div.innerHTML = '';
@@ -190,10 +202,11 @@
         streak = 0;
       }
 
-      localStorage.setItem('xp', xp);
-      localStorage.setItem('streak', streak);
+      localStorage.setItem('pd_xp', xp);
+      localStorage.setItem('pd_streak', streak);
+
+      saveRanking();
       updateStats();
-      document.getElementById('nextBtn').style.display = 'block';
     }
 
     function nextQuestion() {
@@ -201,13 +214,39 @@
       if (index >= lessons[currentLang].length) {
         document.getElementById('question').textContent = 'Lesson Complete!';
         document.getElementById('answers').innerHTML = '';
-        document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('progress').style.width = '100%';
         return;
       }
       showQuestion();
     }
 
+    // FAKE ONLINE RANKING USING LOCALSTORAGE
+    function saveRanking() {
+      let ranking = JSON.parse(localStorage.getItem('pd_ranking') || '[]');
+
+      const existing = ranking.find(r => r.name === user);
+      if (existing) existing.xp = xp;
+      else ranking.push({ name: user, xp });
+
+      ranking.sort((a,b)=>b.xp-a.xp);
+      localStorage.setItem('pd_ranking', JSON.stringify(ranking));
+      loadRanking();
+    }
+
+    function loadRanking() {
+      const list = document.getElementById('ranking');
+      list.innerHTML = '';
+
+      let ranking = JSON.parse(localStorage.getItem('pd_ranking') || '[]');
+
+      ranking.slice(0,5).forEach(r => {
+        const li = document.createElement('li');
+        li.textContent = `${r.name} — ${r.xp} XP`;
+        list.appendChild(li);
+      });
+    }
+
+    // SERVICE WORKER
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
     }
