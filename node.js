@@ -1,5 +1,3 @@
-// Pink Doulingo - Simple Node.js Server // Run: npm init -y && npm install express cors body-parser lowdb // Then: node server.js
-
 const express = require('express'); const cors = require('cors'); const bodyParser = require('body-parser'); const { Low, JSONFile } = require('lowdb');
 
 const app = express(); app.use(cors()); app.use(bodyParser.json());
